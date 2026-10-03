@@ -1,0 +1,100 @@
+{
+    "Logistic Regression": {
+        "accuracy": 0.7027,
+        "macro_precision": 0.5958,
+        "macro_recall": 0.6164,
+        "macro_f1": 0.6016,
+        "weighted_f1": 0.7062,
+        "per_class": {
+            "negative": {
+                "precision": 0.4923,
+                "recall": 0.6531,
+                "f1_score": 0.5614,
+                "support": 196
+            },
+            "neutral": {
+                "precision": 0.4483,
+                "recall": 0.398,
+                "f1_score": 0.4216,
+                "support": 196
+            },
+            "positive": {
+                "precision": 0.8469,
+                "recall": 0.7981,
+                "f1_score": 0.8218,
+                "support": 728
+            }
+        },
+        "labels": [
+            "negative",
+            "neutral",
+            "positive"
+        ],
+        "confusion_matrix": [
+            [
+                128,
+                31,
+                37
+            ],
+            [
+                50,
+                78,
+                68
+            ],
+            [
+                82,
+                65,
+                581
+            ]
+        ]
+    },
+    "Naive Bayes": {
+        "accuracy": 0.675,
+        "macro_precision": 0.7085,
+        "macro_recall": 0.3921,
+        "macro_f1": 0.3722,
+        "weighted_f1": 0.5776,
+        "per_class": {
+            "negative": {
+                "precision": 0.5577,
+                "recall": 0.148,
+                "f1_score": 0.2339,
+                "support": 196
+            },
+            "neutral": {
+                "precision": 0.8889,
+                "recall": 0.0408,
+                "f1_score": 0.078,
+                "support": 196
+            },
+            "positive": {
+                "precision": 0.6789,
+                "recall": 0.9876,
+                "f1_score": 0.8047,
+                "support": 728
+            }
+        },
+        "labels": [
+            "negative",
+            "neutral",
+            "positive"
+        ],
+        "confusion_matrix": [
+            [
+                29,
+                0,
+                167
+            ],
+            [
+                15,
+                8,
+                173
+            ],
+            [
+                8,
+                1,
+                719
+            ]
+        ]
+    }
+}
