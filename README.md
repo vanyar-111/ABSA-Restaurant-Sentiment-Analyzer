@@ -1,4 +1,3 @@
-Yes. Use this as the **entire `README.md`**. It is cleaned, has no emojis, no Claude links, no academic/viva wording, and matches your current model configuration and results.
 
 ````markdown
 # Aspect-Based Sentiment Analysis for Restaurant Reviews
