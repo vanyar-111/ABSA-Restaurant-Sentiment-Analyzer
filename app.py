@@ -21,7 +21,7 @@ import streamlit as st
 # Configure page
 st.set_page_config(
     page_title="Aspect-Based Sentiment Analysis | Restaurant Reviews",
-    page_icon="🍽️",
+    page_icon="ABSA-LOGO.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
