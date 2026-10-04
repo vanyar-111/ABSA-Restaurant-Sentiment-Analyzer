@@ -121,12 +121,12 @@ st.markdown("""
 
 
 # Sidebar Navigation & Settings
-st.sidebar.title("🍽️ ABSA Restaurant NLP")
-st.sidebar.markdown("**SemEval-2014 Task 4 Project**")
+st.sidebar.title("ABSA Restaurant NLP")
+st.sidebar.caption("Aspect-Based Sentiment Analysis")
 
 page = st.sidebar.radio(
     "Navigation",
-    ["🔍 Live Review Analyzer", "📊 Dataset & Model Dashboard", "🧪 Batch Benchmark Tester", "📖 Viva & Architecture Q&A"]
+    ["Review Analyzer", "Model & Dataset Insights", "Model Evaluation"]
 )
 
 st.sidebar.markdown("---")
@@ -140,18 +140,17 @@ model_code = "lr" if "Logistic" in model_choice else "nb"
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "**Academically Understandable MVP**\n\n"
-    "• Dataset: SemEval-2014 Task 4\n\n"
-    "• Feature: TF-IDF (1-2 N-grams)\n\n"
-    "• Context: Clause boundary windowing\n\n"
-    "• No LLM/OpenAI APIs utilized."
+    "NLP Analysis System\n\n"
+    "Dataset: SemEval-2014 Restaurant Reviews\n\n"
+    "Models: Logistic Regression, Multinomial Naive Bayes\n\n"
+    "Features: TF-IDF (1–3 grams)"
 )
 
 
 # ==========================================
 # PAGE 1: LIVE REVIEW ANALYZER
 # ==========================================
-if page == "🔍 Live Review Analyzer":
+if page == "Review Analyzer":
     st.markdown('<div class="main-title">Aspect-Based Sentiment Analysis</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Extract fine-grained restaurant aspects and determine their individual sentiment polarities.</div>', unsafe_allow_html=True)
 
@@ -168,7 +167,7 @@ if page == "🔍 Live Review Analyzer":
         "Mixed: Sushi vs Bill": "The sushi was fresh, but the bill gave us a shock."
     }
 
-    selected_example = st.selectbox("💡 Choose an example or write your own below:", list(examples.keys()))
+    selected_example = st.selectbox(" Choose an example or write your own below:", list(examples.keys()))
 
     default_text = examples[selected_example] if selected_example != "Custom Review" else "The food was amazing but the service was extremely slow."
 
@@ -181,7 +180,7 @@ if page == "🔍 Live Review Analyzer":
 
     col_btn, col_clear = st.columns([1, 6])
     with col_btn:
-        analyze_clicked = st.button("🚀 Analyze Review", type="primary", use_container_width=True)
+        analyze_clicked = st.button(" Analyze Review", type="primary", use_container_width=True)
 
     if analyze_clicked or user_input:
         if not user_input.strip():
@@ -190,7 +189,7 @@ if page == "🔍 Live Review Analyzer":
             with st.spinner("Analyzing aspects and polarities..."):
                 result = pipeline.analyze_review(user_input, classifier_type=model_code)
 
-            st.markdown("### 📋 Analysis Results")
+            st.markdown("###  Analysis Results")
 
             # Overall Sentiment Badge
             overall = result["overall_sentiment"]
@@ -208,15 +207,15 @@ if page == "🔍 Live Review Analyzer":
                 st.metric("Detected Aspects", len(result["aspect_results"]))
             with col3:
                 summary = result["sentiment_summary"]
-                st.markdown(f"🟢 **{summary['positive']}** Pos | 🔴 **{summary['negative']}** Neg | ⚪ **{summary['neutral']}** Neu")
+                st.markdown(f" **{summary['positive']}** Pos |  **{summary['negative']}** Neg |  **{summary['neutral']}** Neu")
 
             st.markdown("---")
 
             # Per-Aspect Cards
             if not result["aspect_results"]:
-                st.info("ℹ️ No specific restaurant aspect terms were detected in the text. The sentence was evaluated as a whole.")
+                st.info(" No specific restaurant aspect terms were detected in the text. The sentence was evaluated as a whole.")
             else:
-                st.markdown("#### 🎯 Aspect-Level Breakdown")
+                st.markdown("####  Aspect-Level Breakdown")
                 st.caption("Each aspect term is evaluated using its isolated local context window:")
 
                 for item in result["aspect_results"]:
@@ -236,7 +235,7 @@ if page == "🔍 Live Review Analyzer":
                         st.markdown(f"""
                         <div class="aspect-card">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <span style="font-size: 1.15rem; font-weight: 700; color: #111827;">🏷️ {aspect_name.upper()}</span>
+                                <span style="font-size: 1.15rem; font-weight: 700; color: #111827;"> {aspect_name.upper()}</span>
                                 <span class="{badge_class}">{sentiment.upper()} ({conf*100:.1f}%)</span>
                             </div>
                             <div style="font-size: 0.95rem; color: #374151; margin-bottom: 8px;">
@@ -259,15 +258,15 @@ if page == "🔍 Live Review Analyzer":
 # ==========================================
 # PAGE 2: DATASET & MODEL DASHBOARD
 # ==========================================
-elif page == "📊 Dataset & Model Dashboard":
-    st.markdown('<div class="main-title">Dataset & Model Evaluation Dashboard</div>', unsafe_allow_html=True)
+elif page == "Model & Dataset Insights":
+    st.markdown('<div class="main-title">Model & Dataset Insights</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Metrics, class distributions, and confusion matrices on SemEval-2014 Task 4 Gold Test Set.</div>', unsafe_allow_html=True)
 
-    tab_eval, tab_data, tab_aspects = st.tabs(["📈 Model Evaluation & Confusion Matrix", "📊 Sentiment Class Distribution", "🏷️ Frequent Aspects Breakdown"])
+    tab_eval, tab_data, tab_aspects = st.tabs([" Model Evaluation & Confusion Matrix", " Sentiment Class Distribution", " Frequent Aspects Breakdown"])
 
     # TAB 1: MODEL EVALUATION
     with tab_eval:
-        st.markdown("### 🏆 Gold Test Set Performance (N = 1,120 aspect instances)")
+        st.markdown("###  Gold Test Set Performance (N = 1,120 aspect instances)")
 
         lr_res = metrics_data.get("Logistic Regression", {})
         nb_res = metrics_data.get("Naive Bayes", {})
@@ -293,7 +292,7 @@ elif page == "📊 Dataset & Model Dashboard":
         })
         st.dataframe(comp_df, hide_index=True, use_container_width=True)
 
-        st.markdown("#### 🔲 Confusion Matrices")
+        st.markdown("####  Confusion Matrices")
         labels = lr_res.get("labels", ["negative", "neutral", "positive"])
 
         fig_cm, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
@@ -315,11 +314,11 @@ elif page == "📊 Dataset & Model Dashboard":
         st.pyplot(fig_cm)
         plt.close(fig_cm)
 
-        st.caption("Observation for Viva: Naive Bayes suffers from extreme class-imbalance bias towards 'positive', whereas Logistic Regression with balanced class weights correctly identifies negative and neutral instances.")
+        st.caption("Naive Bayes suffers from extreme class-imbalance bias towards 'positive', whereas Logistic Regression with balanced class weights correctly identifies negative and neutral instances.")
 
     # TAB 2: SENTIMENT CLASS DISTRIBUTION
     with tab_data:
-        st.markdown("### 📊 Dataset Sentiment Polarity Distribution")
+        st.markdown("###  Dataset Sentiment Polarity Distribution")
         col_d1, col_d2 = st.columns(2)
 
         with col_d1:
@@ -349,7 +348,7 @@ elif page == "📊 Dataset & Model Dashboard":
 
     # TAB 3: FREQUENT ASPECTS & ASPECT-WISE SENTIMENT
     with tab_aspects:
-        st.markdown("### 🏷️ Top Frequent Restaurant Aspects in SemEval-2014")
+        st.markdown("###  Top Frequent Restaurant Aspects in SemEval-2014")
 
         top_aspects = train_df["aspect_term"].str.lower().value_counts().head(12)
 
@@ -364,7 +363,7 @@ elif page == "📊 Dataset & Model Dashboard":
         st.pyplot(fig_asp)
         plt.close(fig_asp)
 
-        st.markdown("#### ⚖️ Aspect-Wise Positive vs Negative Distribution")
+        st.markdown("####  Aspect-Wise Positive vs Negative Distribution")
         target_top = ["food", "service", "prices", "place", "staff", "menu", "pizza", "atmosphere"]
         aspect_sub = train_df[train_df["aspect_term"].str.lower().isin(target_top)]
         pivot_df = pd.crosstab(aspect_sub["aspect_term"].str.lower(), aspect_sub["polarity"])
@@ -380,15 +379,15 @@ elif page == "📊 Dataset & Model Dashboard":
 
 
 # ==========================================
-# PAGE 3: BATCH BENCHMARK TESTER
+# PAGE 3: Model Evaluation
 # ==========================================
-elif page == "🧪 Batch Benchmark Tester":
-    st.markdown('<div class="main-title">Batch Benchmark Verification</div>', unsafe_allow_html=True)
+elif page == "Model Evaluation":
+    st.markdown('<div class="main-title">Model Evaluation</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Run pre-defined test cases covering single, multiple, and mixed-sentiment reviews.</div>', unsafe_allow_html=True)
 
     from tests.test_reviews import TEST_REVIEWS
 
-    if st.button("▶️ Run Batch Test on All 12 Reviews", type="primary"):
+    if st.button(" Run Batch Test on All 12 Reviews", type="primary"):
         results_list = []
         for item in TEST_REVIEWS:
             res = pipeline.analyze_review(item["review"], classifier_type=model_code)
@@ -411,42 +410,3 @@ elif page == "🧪 Batch Benchmark Tester":
 
 
 # ==========================================
-# PAGE 4: VIVA & ARCHITECTURE Q&A
-# ==========================================
-elif page == "📖 Viva & Architecture Q&A":
-    st.markdown('<div class="main-title">College NLP Viva & Defense Guide</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">Theoretical explanations, architecture justifications, and honest system limitations.</div>', unsafe_allow_html=True)
-
-    with st.expander("1. What is Aspect-Based Sentiment Analysis (ABSA) and how does it differ from Standard Sentiment Analysis?", expanded=True):
-        st.write("""
-        **Standard Sentiment Analysis** assigns a single global label to an entire review (e.g. 'Positive' or 'Negative').
-        However, human reviews are naturally multidimensional:
-        - *"The food was amazing but the service was extremely slow."*
-        - A global sentiment classifier is forced to pick either positive or negative, losing critical granular feedback.
-        - **ABSA decomposes reviews into pairs of (Aspect Term, Sentiment Polarity)**, recognizing that a customer can adore the cuisine while deploring the staff speed.
-        """)
-
-    with st.expander("2. Why did we choose Classical NLP (POS + TF-IDF + Logistic Regression) instead of an LLM API or BERT?"):
-        st.write("""
-        1. **Academic Understandability**: In a viva, every parameter and feature representation can be mathematically explained (Bayes' theorem, TF-IDF dot products, sigmoid probabilities).
-        2. **Determinism & Reproducibility**: No external API rate limits, costs, network latency, or non-deterministic hallucinations.
-        3. **Fast Local Execution**: The trained models load in milliseconds and run locally on standard CPU without GPU requirements.
-        4. **Interpretability**: Feature weights reveal exact n-grams (e.g., *'extremely slow' -> negative weight*, *'top notch' -> positive weight*).
-        """)
-
-    with st.expander("3. How do we prevent feature bleeding in mixed-sentiment reviews?"):
-        st.write("""
-        This is solved through **Clause Boundary Splitting and Local Context Windowing**:
-        - Adversative connectives (*but, however, yet, although, while*) and punctuation marks (*; , .*) serve as semantic split points.
-        - When predicting sentiment for *'food'*, the classifier only examines the clause *'The food was amazing'*.
-        - When predicting sentiment for *'service'*, it only examines *'the service was extremely slow'*.
-        - The aspect term is concatenated with its clause context (`[aspect_term] + [local_context]`), generating isolated TF-IDF features.
-        """)
-
-    with st.expander("4. What are the known limitations of this system? (Honest Viva Discussion)"):
-        st.write("""
-        As required for an honest academic project:
-        - **Implicit Aspects**: The system detects explicit aspects (nouns/noun phrases). Implicit aspects without explicit nouns (e.g., *"It cost an arm and a leg"* meaning price is high) require deeper semantic parsing.
-        - **Complex Sarcasm**: Sarcastic remarks (*"Took only 3 hours to get water, great job!"*) require pragmatic modeling.
-        - **Vocabulary Coverage**: Aspect extraction uses POS chunking combined with a 300-term domain lexicon. Unseen food names not tagged as nouns may require continuous domain vocabulary expansion.
-        """)

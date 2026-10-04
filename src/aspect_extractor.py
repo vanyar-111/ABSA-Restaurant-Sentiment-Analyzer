@@ -2,56 +2,164 @@
 aspect_extractor.py
 ===================
 Extracts candidate aspect terms from review text using:
-1. Part-of-Speech (POS) pattern chunking (Noun chunks: JJ* NN+)
-2. Domain aspect lexicon filtering mined from SemEval-2014
+1. Part-of-Speech (POS) pattern chunking
+2. Domain aspect lexicon filtering
+3. Sentiment-adjective filtering
+4. Single-word lexicon fallback
 
-Academic Explanation:
----------------------
-In Aspect-Based Sentiment Analysis (ABSA), aspect extraction is the subtask
-of identifying words or phrases representing target entities or attributes
-of a restaurant (e.g., 'food', 'service', 'crust', 'wait staff', 'ambiance').
-
-Classical approaches:
-- Rule-based Syntactic Chunking: In English, restaurant aspects are overwhelmingly
-  nouns (NN, NNS) or compound noun phrases preceded by optional modifiers
-  (e.g., [attentive/JJ] [wait/NN] [staff/NN]).
-- Domain Lexicon Validation: To eliminate non-aspect common nouns (such as 'time',
-  'day', 'person'), candidates are matched or ranked against a domain vocabulary
-  derived from the SemEval restaurant dataset.
+In Aspect-Based Sentiment Analysis (ABSA), aspect extraction identifies
+entities or attributes that are being discussed in a review, such as:
+food, service, crust, wait staff, ambiance, prices, etc.
 """
 
 import re
 import nltk
 from typing import List, Dict, Set, Tuple, Optional
+
 from src.preprocessor import clean_text, tokenize, pos_tag_tokens
 
 
-# Sentiment adjectives that should NOT be part of the aspect name itself
+# ---------------------------------------------------------------------------
+# Sentiment adjectives
+# ---------------------------------------------------------------------------
+
+# These words describe sentiment and should not become part of the
+# aspect name itself.
 SENTIMENT_ADJECTIVES: Set[str] = {
-    "good", "great", "excellent", "amazing", "wonderful", "fantastic", "delicious",
-    "bad", "terrible", "horrible", "awful", "poor", "overpriced", "expensive",
-    "cheap", "slow", "fast", "quick", "pleasant", "nice", "clean", "dirty",
-    "average", "decent", "rude", "friendly", "attentive", "cozy", "noisy", "loud"
+    "good",
+    "great",
+    "excellent",
+    "amazing",
+    "wonderful",
+    "fantastic",
+    "delicious",
+    "bad",
+    "terrible",
+    "horrible",
+    "awful",
+    "poor",
+    "overpriced",
+    "expensive",
+    "cheap",
+    "slow",
+    "fast",
+    "quick",
+    "pleasant",
+    "nice",
+    "clean",
+    "dirty",
+    "average",
+    "decent",
+    "rude",
+    "friendly",
+    "attentive",
+    "cozy",
+    "noisy",
+    "loud",
 }
 
-# Default fallback restaurant aspects seed lexicon
+
+# ---------------------------------------------------------------------------
+# Default restaurant aspect lexicon
+# ---------------------------------------------------------------------------
+
 DEFAULT_RESTAURANT_ASPECTS: Set[str] = {
-    "food", "service", "staff", "waiter", "waitress", "hostess", "management",
-    "ambiance", "atmosphere", "decor", "interior", "environment", "music",
-    "price", "prices", "bill", "cost", "value", "menu", "portion", "portions",
-    "drink", "drinks", "wine", "beer", "cocktail", "cocktails", "bar",
-    "pizza", "pasta", "sushi", "burger", "steak", "chicken", "fish", "bread",
-    "dessert", "salad", "appetizer", "seafood", "cheese", "sauce", "crust",
-    "table", "seat", "seating", "place", "location", "reservation", "meal",
-    "dinner", "lunch", "breakfast", "dining", "experience", "wait", "quality"
+    "food",
+    "service",
+    "staff",
+    "waiter",
+    "waitress",
+    "hostess",
+    "management",
+    "ambiance",
+    "atmosphere",
+    "decor",
+    "interior",
+    "environment",
+    "music",
+    "price",
+    "prices",
+    "bill",
+    "cost",
+    "value",
+    "menu",
+    "portion",
+    "portions",
+    "drink",
+    "drinks",
+    "wine",
+    "beer",
+    "cocktail",
+    "cocktails",
+    "bar",
+    "pizza",
+    "pasta",
+    "sushi",
+    "burger",
+    "steak",
+    "chicken",
+    "fish",
+    "bread",
+    "dessert",
+    "salad",
+    "appetizer",
+    "seafood",
+    "cheese",
+    "sauce",
+    "crust",
+    "table",
+    "seat",
+    "seating",
+    "place",
+    "location",
+    "reservation",
+    "meal",
+    "dinner",
+    "lunch",
+    "breakfast",
+    "dining",
+    "experience",
+    "wait",
+    "quality",
 }
 
-# Stopwords that should never be identified as standalone aspects
+
+# ---------------------------------------------------------------------------
+# Excluded generic terms
+# ---------------------------------------------------------------------------
+
 EXCLUDED_ASPECT_TOKENS: Set[str] = {
-    "i", "we", "you", "they", "he", "she", "it", "one", "everyone", "someone",
-    "thing", "things", "lot", "lots", "way", "bit", "kind", "part", "nothing",
-    "anything", "everything", "times", "time", "day", "night", "week", "year",
-    "restaurant", "restaurants", "special", "taste"
+    "i",
+    "we",
+    "you",
+    "they",
+    "he",
+    "she",
+    "it",
+    "one",
+    "everyone",
+    "someone",
+    "thing",
+    "things",
+    "lot",
+    "lots",
+    "way",
+    "bit",
+    "kind",
+    "part",
+    "nothing",
+    "anything",
+    "everything",
+    "times",
+    "time",
+    "day",
+    "night",
+    "week",
+    "year",
+    "restaurant",
+    "restaurants",
+    "special",
+    "taste",
 }
 
 
@@ -61,161 +169,530 @@ class AspectExtractor:
     and domain lexicon validation.
     """
 
-    def __init__(self, domain_lexicon: Optional[Set[str]] = None):
+    def __init__(
+        self,
+        domain_lexicon: Optional[Set[str]] = None
+    ):
         """
-        Initializes the extractor with a domain lexicon.
-        If domain_lexicon is None, defaults to DEFAULT_RESTAURANT_ASPECTS.
+        Initialize the aspect extractor.
+
+        If a domain lexicon is supplied, it is used as the primary
+        restaurant-domain vocabulary. Otherwise, the default restaurant
+        vocabulary is used.
         """
-        self.lexicon = set(domain_lexicon) if domain_lexicon else set(DEFAULT_RESTAURANT_ASPECTS)
-        # Add singular and plural variations
+
+        if domain_lexicon:
+            self.lexicon = set(domain_lexicon)
+        else:
+            self.lexicon = set(DEFAULT_RESTAURANT_ASPECTS)
+
+        # Normalize lexicon and add simple singular/plural variants.
         expanded = set()
+
         for term in self.lexicon:
-            expanded.add(term.lower())
+            term = term.lower().strip()
+
+            if not term:
+                continue
+
+            expanded.add(term)
+
             if term.endswith("s"):
-                expanded.add(term[:-1].lower())
+                expanded.add(term[:-1])
             else:
-                expanded.add((term + "s").lower())
+                expanded.add(term + "s")
+
         self.lexicon.update(expanded)
 
-        # Define POS chunk grammar: Nouns and compound nouns
+        # POS grammar for contiguous noun phrases.
         self.grammar = r"""
             ASPECT: {<NN|NNS|NNP|NNPS>+}
         """
+
         try:
             self.chunk_parser = nltk.RegexpParser(self.grammar)
         except Exception:
             self.chunk_parser = None
 
-    def extract_candidates_pos(self, text: str) -> List[Dict[str, any]]:
+
+    # -----------------------------------------------------------------------
+    # POS candidate extraction
+    # -----------------------------------------------------------------------
+
+    def extract_candidates_pos(
+        self,
+        text: str
+    ) -> List[Dict[str, any]]:
         """
-        Extracts noun-phrase candidates using NLTK POS chunking.
-        Returns list of dicts with 'term', 'pos_tag', 'start_char', 'end_char'.
+        Extract noun-based candidate aspect phrases using POS tagging.
         """
+
         cleaned = clean_text(text)
         tokens = tokenize(cleaned)
         tagged = pos_tag_tokens(tokens)
 
         candidates = []
+
         if self.chunk_parser is not None:
+
             tree = self.chunk_parser.parse(tagged)
-            for subtree in tree.subtrees(filter=lambda t: t.label() == "ASPECT"):
-                words = [w for w, pos in subtree.leaves()]
+
+            for subtree in tree.subtrees(
+                filter=lambda t: t.label() == "ASPECT"
+            ):
+
+                words = [
+                    word
+                    for word, pos in subtree.leaves()
+                ]
+
+                original_words = list(words)
+
+                # Remove sentiment adjectives from the beginning.
+                while (
+                    words
+                    and words[0].lower()
+                    in SENTIMENT_ADJECTIVES
+                ):
+                    words.pop(0)
+
+                if not words:
+                    continue
+
                 phrase = " ".join(words).strip()
-                # Extract the core head noun or phrase
-                if phrase.lower() not in EXCLUDED_ASPECT_TOKENS and len(phrase) > 1:
-                    candidates.append({
-                        "term": phrase,
-                        "raw_words": words,
-                        "pos_tags": [pos for w, pos in subtree.leaves()]
-                    })
+
+                if (
+                    phrase.lower()
+                    not in EXCLUDED_ASPECT_TOKENS
+                    and len(phrase) > 1
+                ):
+
+                    original_tags = [
+                        pos
+                        for word, pos in subtree.leaves()
+                    ]
+
+                    candidates.append(
+                        {
+                            "term": phrase,
+                            "raw_words": words,
+                            "pos_tags": original_tags[
+                                -len(words):
+                            ],
+                        }
+                    )
+
         else:
-            # Fallback simple contiguous noun grouping
+
+            # Fallback when the chunk parser cannot be created.
             current = []
+
             for word, pos in tagged:
+
                 if pos.startswith("NN"):
                     current.append(word)
+
                 else:
+
                     if current:
-                        phrase = " ".join(current)
-                        if phrase.lower() not in EXCLUDED_ASPECT_TOKENS:
-                            candidates.append({"term": phrase, "raw_words": current, "pos_tags": ["NN"]*len(current)})
+
+                        words = list(current)
+
+                        while (
+                            words
+                            and words[0].lower()
+                            in SENTIMENT_ADJECTIVES
+                        ):
+                            words.pop(0)
+
+                        if words:
+
+                            phrase = " ".join(words)
+
+                            if (
+                                phrase.lower()
+                                not in EXCLUDED_ASPECT_TOKENS
+                            ):
+                                candidates.append(
+                                    {
+                                        "term": phrase,
+                                        "raw_words": words,
+                                        "pos_tags": [
+                                            "NN"
+                                        ] * len(words),
+                                    }
+                                )
+
                         current = []
+
             if current:
-                phrase = " ".join(current)
-                if phrase.lower() not in EXCLUDED_ASPECT_TOKENS:
-                    candidates.append({"term": phrase, "raw_words": current, "pos_tags": ["NN"]*len(current)})
+
+                words = list(current)
+
+                while (
+                    words
+                    and words[0].lower()
+                    in SENTIMENT_ADJECTIVES
+                ):
+                    words.pop(0)
+
+                if words:
+
+                    phrase = " ".join(words)
+
+                    if (
+                        phrase.lower()
+                        not in EXCLUDED_ASPECT_TOKENS
+                    ):
+                        candidates.append(
+                            {
+                                "term": phrase,
+                                "raw_words": words,
+                                "pos_tags": [
+                                    "NN"
+                                ] * len(words),
+                            }
+                        )
 
         return candidates
 
-    def extract_aspects(self, text: str) -> List[str]:
-        """
-        Main extraction method:
-        Given raw review text, identifies the high-confidence restaurant aspects.
-        Prioritizes:
-        1. Multi-word and single-word matches against domain lexicon
-        2. Valid noun chunk candidates whose head noun belongs to restaurant domain
 
-        Returns:
-        --------
-        List[str]:
-            Clean list of distinct aspect terms detected in text order.
+    # -----------------------------------------------------------------------
+    # Main aspect extraction
+    # -----------------------------------------------------------------------
+
+    def extract_aspects(
+        self,
+        text: str
+    ) -> List[str]:
         """
+        Extract restaurant aspects from review text.
+
+        Extraction strategy:
+
+        1. Match meaningful multi-word domain phrases.
+        2. Extract POS-based noun candidates.
+        3. Remove sentiment adjectives from candidates.
+        4. Fall back to single-word domain matching.
+        5. Prefer longer phrases over individual words.
+        """
+
         if not text or not isinstance(text, str):
             return []
 
         text_lower = text.lower()
-        extracted: List[Tuple[int, str]] = []  # (start_index, aspect_term)
 
-        # Pass 1: Direct multi-word lexicon matching (e.g. "wait staff", "beer selection")
-        for lex_term in sorted(self.lexicon, key=lambda x: len(x), reverse=True):
-            if " " in lex_term:
-                pattern = r"\b" + re.escape(lex_term) + r"\b"
-                for match in re.finditer(pattern, text_lower):
-                    extracted.append((match.start(), text[match.start():match.end()]))
+        # Each item:
+        # (character_start_position, aspect_term)
+        extracted: List[Tuple[int, str]] = []
 
-        # Pass 2: POS Chunk candidate filtering
+
+        # ================================================================
+        # PASS 1
+        # Multi-word domain lexicon matching
+        # ================================================================
+
+        for lex_term in sorted(
+            self.lexicon,
+            key=lambda x: len(x),
+            reverse=True
+        ):
+
+            if " " not in lex_term:
+                continue
+
+            lex_words = lex_term.lower().split()
+
+            # Remove sentiment-bearing words from the beginning.
+            while (
+                lex_words
+                and lex_words[0]
+                in SENTIMENT_ADJECTIVES
+            ):
+                lex_words.pop(0)
+
+            if not lex_words:
+                continue
+
+            normalized_term = " ".join(lex_words)
+
+            pattern = (
+                r"\b"
+                + re.escape(normalized_term)
+                + r"\b"
+            )
+
+            for match in re.finditer(
+                pattern,
+                text_lower
+            ):
+
+                extracted.append(
+                    (
+                        match.start(),
+                        text[
+                            match.start():
+                            match.end()
+                        ],
+                    )
+                )
+
+
+        # ================================================================
+        # PASS 2
+        # POS noun phrase candidates
+        # ================================================================
+
         pos_candidates = self.extract_candidates_pos(text)
-        for cand in pos_candidates:
-            term = cand["term"]
+
+        for candidate in pos_candidates:
+
+            term = candidate["term"].strip()
+
+            if not term:
+                continue
+
+            words = term.split()
+
+            # Remove sentiment adjectives from the beginning.
+            while (
+                words
+                and words[0].lower()
+                in SENTIMENT_ADJECTIVES
+            ):
+                words.pop(0)
+
+            if not words:
+                continue
+
+            term = " ".join(words)
             term_lower = term.lower()
-            words = term_lower.split()
 
-            # Check if candidate itself or any constituent noun is in lexicon
-            matched = False
-            if term_lower in self.lexicon:
-                matched = True
-            else:
-                for w in words:
-                    if w in self.lexicon and w not in EXCLUDED_ASPECT_TOKENS:
-                        matched = True
-                        break
+            if (
+                term_lower
+                in EXCLUDED_ASPECT_TOKENS
+            ):
+                continue
 
-            if matched:
-                # Find start position in text
-                pattern = r"\b" + re.escape(term) + r"\b"
-                match = re.search(pattern, text, re.IGNORECASE)
-                start_pos = match.start() if match else len(extracted)
-                extracted.append((start_pos, term))
+            # Accept a candidate if the complete phrase or
+            # at least one constituent word belongs to the
+            # restaurant domain vocabulary.
+            matched = (
+                term_lower in self.lexicon
+                or any(
+                    word.lower() in self.lexicon
+                    and word.lower()
+                    not in EXCLUDED_ASPECT_TOKENS
+                    for word in words
+                )
+            )
 
-        # Pass 3: Single-word lexicon sweep for any missed core keywords (e.g., 'food', 'service')
+            if not matched:
+                continue
+
+            pattern = (
+                r"\b"
+                + re.escape(term)
+                + r"\b"
+            )
+
+            match = re.search(
+                pattern,
+                text,
+                re.IGNORECASE
+            )
+
+            if match:
+
+                extracted.append(
+                    (
+                        match.start(),
+                        text[
+                            match.start():
+                            match.end()
+                        ],
+                    )
+                )
+
+
+        # ================================================================
+        # PASS 3
+        # Single-word domain lexicon fallback
+        # ================================================================
+
         for word in tokenize(text):
+
             word_lower = word.lower()
-            if word_lower in self.lexicon and word_lower not in EXCLUDED_ASPECT_TOKENS:
-                pattern = r"\b" + re.escape(word) + r"\b"
-                match = re.search(pattern, text, re.IGNORECASE)
-                if match:
-                    extracted.append((match.start(), word))
 
-        # Sort by position in review text
-        extracted.sort(key=lambda x: x[0])
+            if (
+                word_lower
+                not in self.lexicon
+            ):
+                continue
 
-        # Deduplicate while preserving order and longest matching spans
+            if (
+                word_lower
+                in EXCLUDED_ASPECT_TOKENS
+            ):
+                continue
+
+            pattern = (
+                r"\b"
+                + re.escape(word)
+                + r"\b"
+            )
+
+            match = re.search(
+                pattern,
+                text,
+                re.IGNORECASE
+            )
+
+            if not match:
+                continue
+
+            start_pos = match.start()
+
+            # Determine whether this single word is already
+            # covered by a longer extracted phrase.
+            covered_by_phrase = False
+
+            for (
+                existing_start,
+                existing_term
+            ) in extracted:
+
+                existing_words = (
+                    existing_term.lower().split()
+                )
+
+                if len(existing_words) <= 1:
+                    continue
+
+                existing_end = (
+                    existing_start
+                    + len(existing_term)
+                )
+
+                if (
+                    existing_start
+                    <= start_pos
+                    < existing_end
+                ):
+                    covered_by_phrase = True
+                    break
+
+            # IMPORTANT:
+            # This is outside the loop above.
+            if not covered_by_phrase:
+
+                extracted.append(
+                    (
+                        start_pos,
+                        word
+                    )
+                )
+
+
+        # ================================================================
+        # SORT
+        # ================================================================
+
+        extracted.sort(
+            key=lambda item: (
+                item[0],
+                -len(item[1])
+            )
+        )
+
+
+        # ================================================================
+        # DEDUPLICATION
+        # ================================================================
+
         final_aspects = []
+
         for _, term in extracted:
+
             clean_term = term.strip()
-            # If sub-string of already added term (e.g. 'food' inside 'thai food'), skip or keep specific
+
+            if not clean_term:
+                continue
+
+            clean_lower = clean_term.lower()
+
+            if (
+                clean_lower
+                in EXCLUDED_ASPECT_TOKENS
+            ):
+                continue
+
             already_covered = False
+
             for existing in final_aspects:
-                if clean_term.lower() == existing.lower() or (
-                    clean_term.lower() in existing.lower().split()
+
+                existing_lower = existing.lower()
+
+                # Exact duplicate
+                if (
+                    clean_lower
+                    == existing_lower
                 ):
                     already_covered = True
                     break
-            if not already_covered and clean_term.lower() not in EXCLUDED_ASPECT_TOKENS:
-                final_aspects.append(clean_term)
+
+                # If the current term is a single word
+                # already contained in a longer aspect phrase,
+                # don't add it separately.
+                if (
+                    len(clean_lower.split()) == 1
+                    and clean_lower
+                    in existing_lower.split()
+                ):
+                    already_covered = True
+                    break
+
+            if not already_covered:
+
+                final_aspects.append(
+                    clean_term
+                )
+
 
         return final_aspects
 
 
+# ===========================================================================
+# Standalone testing
+# ===========================================================================
+
 if __name__ == "__main__":
+
     extractor = AspectExtractor()
+
     test_cases = [
         "The food was amazing but the service was extremely slow.",
         "Delicious thin crust pizza and attentive wait staff, though the wine list is small.",
         "Great atmosphere and affordable prices.",
-        "The chicken was raw and the soup was freezing cold."
+        "The chicken was raw and the soup was freezing cold.",
+        "Great beer selection but the atmosphere was far too noisy.",
+        "Decent salad, ordinary dressing, but prompt service.",
+        "Excellent dessert menu but the prices are exorbitant.",
     ]
-    for tc in test_cases:
-        print(f"\nReview: '{tc}'")
-        aspects = extractor.extract_aspects(tc)
-        print("Detected Aspects:", aspects)
+
+    for test_case in test_cases:
+
+        print(
+            f"\nReview: '{test_case}'"
+        )
+
+        aspects = (
+            extractor.extract_aspects(
+                test_case
+            )
+        )
+
+        print(
+            "Detected Aspects:",
+            aspects
+        )

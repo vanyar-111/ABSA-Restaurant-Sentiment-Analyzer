@@ -122,7 +122,7 @@ def extract_aspect_context(
 
     # Step 4: Return Aspect-Targeted Context Representation
     # Prepends aspect term to ensure high aspect-specific weighting in TF-IDF
-    return f"{aspect_term} {context_str}"
+    return context_str
 
 
 def build_aspect_context_dataset(
