@@ -646,10 +646,3 @@ Potential extensions include:
 * Matplotlib
 * Seaborn
 
----
-
-## License
-
-The source code in this repository is released under the MIT License. See [`LICENSE`](LICENSE).
-
-The SemEval-2014 Task 4 dataset remains subject to its own terms of use.
