@@ -1,14 +1,3 @@
-"""
-app.py
-======
-Interactive Streamlit Web Application & Dashboard for:
-"Aspect-Based Sentiment Analysis for Restaurant Reviews"
-
-College NLP Project MVP
-- Trained on SemEval-2014 Task 4 Restaurant Reviews dataset
-- Classical NLP: NLTK POS Tagging, TF-IDF N-grams, Logistic Regression & Naive Bayes
-"""
-
 import os
 import sys
 import json
@@ -18,15 +7,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 
-# Configure page
 st.set_page_config(
     page_title="Aspect-Based Sentiment Analysis | Restaurant Reviews",
     page_icon="ABSA-LOGO.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Ensure src package can be imported
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 if APP_DIR not in sys.path:
     sys.path.insert(0, APP_DIR)
@@ -35,7 +21,6 @@ from src.pipeline import ABSAPipeline
 from src.data_loader import load_dataset
 
 
-# Cache pipeline and dataset loader to ensure instantaneous responsiveness
 @st.cache_resource
 def get_pipeline():
     models_path = os.path.join(APP_DIR, "models")
@@ -63,7 +48,6 @@ train_df, test_df = get_dataset_stats()
 metrics_data = get_model_metrics()
 
 
-# Styling CSS
 st.markdown("""
 <style>
     .main-title {
@@ -120,7 +104,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# Sidebar Navigation & Settings
 st.sidebar.title("ABSA Restaurant NLP")
 st.sidebar.caption("Aspect-Based Sentiment Analysis")
 
@@ -147,14 +130,10 @@ st.sidebar.info(
 )
 
 
-# ==========================================
-# PAGE 1: LIVE REVIEW ANALYZER
-# ==========================================
 if page == "Review Analyzer":
     st.markdown('<div class="main-title">Aspect-Based Sentiment Analysis</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Extract fine-grained restaurant aspects and determine their individual sentiment polarities.</div>', unsafe_allow_html=True)
 
-    # Example Review Quick-Selector
     examples = {
         "Custom Review": "",
         "Mixed: Food vs Service (Prompt Requirement)": "The food was amazing but the service was extremely slow.",
@@ -191,7 +170,6 @@ if page == "Review Analyzer":
 
             st.markdown("###  Analysis Results")
 
-            # Overall Sentiment Badge
             overall = result["overall_sentiment"]
             overall_badge_class = (
                 "sentiment-positive" if "Positive" in overall and "Mixed" not in overall else
@@ -211,7 +189,6 @@ if page == "Review Analyzer":
 
             st.markdown("---")
 
-            # Per-Aspect Cards
             if not result["aspect_results"]:
                 st.info(" No specific restaurant aspect terms were detected in the text. The sentence was evaluated as a whole.")
             else:
@@ -255,9 +232,6 @@ if page == "Review Analyzer":
                         st.write("")
 
 
-# ==========================================
-# PAGE 2: DATASET & MODEL DASHBOARD
-# ==========================================
 elif page == "Model & Dataset Insights":
     st.markdown('<div class="main-title">Model & Dataset Insights</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Metrics, class distributions, and confusion matrices on SemEval-2014 Task 4 Gold Test Set.</div>', unsafe_allow_html=True)
@@ -378,9 +352,6 @@ elif page == "Model & Dataset Insights":
         plt.close(fig_piv)
 
 
-# ==========================================
-# PAGE 3: Model Evaluation
-# ==========================================
 elif page == "Model Evaluation":
     st.markdown('<div class="main-title">Model Evaluation</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Run pre-defined test cases covering single, multiple, and mixed-sentiment reviews.</div>', unsafe_allow_html=True)
@@ -407,6 +378,3 @@ elif page == "Model Evaluation":
         st.markdown("Click the button above to execute automated evaluation across all 12 benchmark cases.")
         df_preview = pd.DataFrame([{"ID": r["id"], "Category": r["category"], "Review": r["review"]} for r in TEST_REVIEWS])
         st.dataframe(df_preview, hide_index=True, use_container_width=True)
-
-
-# ==========================================
