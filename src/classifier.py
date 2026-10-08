@@ -1,26 +1,3 @@
-"""
-classifier.py
-=============
-Module for training, evaluating, and serializing aspect sentiment classifiers.
-- Feature Extraction: TF-IDF with Unigrams and Bigrams
-- Main Model: Logistic Regression with balanced class weighting
-- Baseline Model: Multinomial Naive Bayes
-- Evaluation: Accuracy, Macro F1, Precision, Recall, Confusion Matrix
-
-Academic Explanation:
----------------------
-Why Logistic Regression + TF-IDF for ABSA?
-1. Interpretability: High feature weights directly correlate with polarity signals
-   (e.g., 'not good', 'amazing', 'cold', 'slow'), perfect for college viva defense.
-2. Balanced Weighting: In review datasets, positive reviews outnumber negative reviews
-   (in SemEval 2014, ~58% positive vs ~22% negative). `class_weight='balanced'`
-   adjusts inverse class frequencies to penalize majority bias.
-3. N-grams (1, 2): Captures negations ('not clean', 'never again') and intensifiers
-   ('extremely good', 'too salty') that unigrams alone miss.
-4. Naive Bayes Baseline: Serves as the classic probabilistic benchmark based on
-   Bayes' Theorem with conditional word independence assumptions.
-"""
-
 import os
 import json
 import joblib
@@ -44,10 +21,6 @@ from src.preprocessor import clean_text
 
 
 class ABSAClassifier:
-    """
-    Manages vectorization, training, evaluation, and inference
-    for Aspect-Based Sentiment Analysis.
-    """
 
     def __init__(self, models_dir: str = "models"):
         self.models_dir = models_dir
@@ -244,7 +217,7 @@ class ABSAClassifier:
 
 
 if __name__ == "__main__":
-    # Base paths relative to project root
+
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     data_path = os.path.join(base_dir, "data")
     models_path = os.path.join(base_dir, "models")
